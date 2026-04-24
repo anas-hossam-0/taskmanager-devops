@@ -1,0 +1,64 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: taskmanager-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: taskmanager
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - taskmanager-network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  mongo-express:
+    image: mongo-express:1.0.2-20
+    container_name: taskmanager-mongo-ui
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_URL: mongodb://mongo:27017/taskmanager
+      ME_CONFIG_BASICAUTH: "false"
+    depends_on:
+      mongo:
+        condition: service_healthy
+    networks:
+      - taskmanager-network
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: development
+    container_name: taskmanager-api
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      MONGO_URI: mongodb://mongo:27017/taskmanager
+      NODE_ENV: development
+    volumes:
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+    depends_on:
+      mongo:
+        condition: service_healthy
+    networks:
+      - taskmanager-network
+
+volumes:
+  mongo-data:
+    driver: local
+
+networks:
+  taskmanager-network:
+    driver: bridge

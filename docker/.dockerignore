@@ -1,0 +1,15 @@
+node_modules
+npm-debug.log
+.env
+.git
+.gitignore
+coverage
+tests
+docker-compose.yml
+Jenkinsfile
+k8s
+terraform
+monitoring
+scripts
+*.md
+.DS_Store
