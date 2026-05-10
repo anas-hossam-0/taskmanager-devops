@@ -53,33 +53,28 @@ pipeline {
 
         stage('Test') {
             steps {
-                sh '''
+                sh """
                     docker run -d \
                         --name mongo-test-${BUILD_NUMBER} \
-                        -p 27018:27017 \
+                        --network dockerjenkins_default \
                         mongo:7
-                    
+
                     echo "Waiting for MongoDB to be ready..."
-                    for i in $(seq 1 10); do
+                    for i in \$(seq 1 10); do
                         if docker exec mongo-test-${BUILD_NUMBER} mongosh --eval "db.runCommand('ping')" --quiet 2>/dev/null; then
                             echo "MongoDB is ready!"
                             break
                         fi
-                        echo "Attempt $i: MongoDB not ready yet..."
+                        echo "Attempt \$i: MongoDB not ready yet..."
                         sleep 2
                     done
-                '''
-                // Instead of a just "sleep 5"
+                """
 
-
-                sh 'MONGO_URI=mongodb://localhost:27018/taskmanager-test npm test'
+                sh "MONGO_URI=mongodb://mongo-test-${BUILD_NUMBER}:27017/taskmanager-test npm test"
             }
             post {
                 always {
-                    sh '''
-                        docker stop mongo-test-${BUILD_NUMBER} || true
-                        docker rm mongo-test-${BUILD_NUMBER} || true
-                    '''
+                    sh "docker rm -f mongo-test-${BUILD_NUMBER} || true"
                 }
             }
         }
